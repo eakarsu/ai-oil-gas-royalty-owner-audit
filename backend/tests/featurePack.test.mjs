@@ -1,0 +1,7 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { filterRecords, recordsToCsv, exportRecords, buildInsights } from "../featurePack.mjs";
+const rows=[{id:1,reference:"A-1",subject:"Alpha well",status:"Open",risk:"High",amount:100,due_date:"2020-01-01"},{id:2,reference:"B-2",subject:"Beta",status:"Closed",risk:"Low",amount:0,due_date:"2999-01-01"}];
+test("search/filter narrows main list",()=>{ assert.equal(filterRecords(rows,{q:"alpha"}).length,1); assert.equal(filterRecords(rows,{status:"Closed"})[0].id,2); assert.equal(filterRecords(rows,{q:"zzz"}).length,0); });
+test("CSV/JSON export preserves 0/false/empty",()=>{ assert.match(recordsToCsv(rows),/B-2/); assert.match(exportRecords(rows,"csv").body,/Alpha/); const j=JSON.parse(exportRecords(rows,"json").body); assert.equal(j.count,2); assert.equal(j.items[1].amount,0); assert.equal(exportRecords([],"csv").body,""); });
+test("deterministic AI fallback is labelled and preserves empty",()=>{ const out=buildInsights(rows,["Royalty exception risk concentration", "Suspense ageing", "Royalty recovery pipeline"]); assert.equal(out.length,3); for(const f of out){ assert.equal(f.aiGenerated,false); assert.equal(f.source,"deterministic-fallback"); assert.ok(f.sections.length>=3); } assert.equal(buildInsights([],["Royalty exception risk concentration", "Suspense ageing", "Royalty recovery pipeline"])[0].metrics[0].value,0); });
